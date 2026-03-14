@@ -1,0 +1,6 @@
+venv/
+.ipynb_checkpoints/
+similarity.pkl
+__pycache__/
+.DS_Store
+*.csv
