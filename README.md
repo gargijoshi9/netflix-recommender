@@ -4,8 +4,8 @@ A content-based movie recommendation engine built with Python as an interactive 
 
 ## 📸 Preview
 
-> <img src="1.png" alt="Alt text" width="400"/>
-> <img src="2.png" alt="Alt text" width="400"/>
+> <img src="1.png" alt="Alt text" />
+> <img src="2.png" alt="Alt text" />
 
 ---
 
