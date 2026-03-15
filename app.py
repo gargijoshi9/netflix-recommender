@@ -3,7 +3,16 @@
 # Streamlit Web App - Cinematic Dark Theme UI
 # Run with: streamlit run app.py
 # ============================================================
+# Attempt to load environment variables from a .env file if python-dotenv is available;
+# this avoids import errors in environments where python-dotenv is not installed.
+try:
+    from dotenv import load_dotenv  # type: ignore
+    load_dotenv()
+except Exception:
+    # python-dotenv not installed or/or failed to load — proceed without it
+    pass
 
+import os
 import streamlit as st
 import pickle
 import requests
@@ -225,7 +234,7 @@ def load_models():
 movies, similarity = load_models()
 movie_list = movies['title'].values
 
-API_KEY = "379f1d878a84f8492c06a86715d18021"
+API_KEY = os.environ.get("TMDB_API_KEY")
 
 # ============================================================
 # Fetch a single poster — sequential with retries

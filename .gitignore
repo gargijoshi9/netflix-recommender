@@ -4,3 +4,4 @@ similarity.pkl
 __pycache__/
 .DS_Store
 *.csv
+.env
