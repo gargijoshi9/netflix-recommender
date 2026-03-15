@@ -4,8 +4,8 @@ A content-based movie recommendation engine built with Python as an interactive 
 
 ## 📸 Preview
 
-> *(Add a screenshot of your app here after deployment)*
-> `![App Screenshot](screenshot.png)`
+> `![App Screenshot](1.png)`
+> `![App Screenshot](2.png)`
 
 ---
 
@@ -41,18 +41,18 @@ You need **two dataset files** from Kaggle and **two model files** to run this p
 
 Download both CSV files and place them in the project root:
 
-| File | Description | Link |
-|------|-------------|------|
-| `tmdb_5000_movies.csv` | Movie metadata (budget, genres, keywords, overview) | [⬇️ Download](https://drive.google.com/file/d/1s8UA56Rr6oklG_xa0jHWb3VvRDgPXLc2/view?usp=sharing) |
-| `tmdb_5000_credits.csv` | Cast and crew information | [⬇️ Download](https://drive.google.com/file/d/1PwoVAndEObW0yRWYEiKLdp_8aXpY7Hs3/view?usp=sharing) |
+| File                    | Description                                         | Link                                                                                              |
+| ----------------------- | --------------------------------------------------- | ------------------------------------------------------------------------------------------------- |
+| `tmdb_5000_movies.csv`  | Movie metadata (budget, genres, keywords, overview) | [⬇️ Download](https://drive.google.com/file/d/1s8UA56Rr6oklG_xa0jHWb3VvRDgPXLc2/view?usp=sharing) |
+| `tmdb_5000_credits.csv` | Cast and crew information                           | [⬇️ Download](https://drive.google.com/file/d/1PwoVAndEObW0yRWYEiKLdp_8aXpY7Hs3/view?usp=sharing) |
 
 ### 2. Model Files — pkl files
 
 If you don't want to run the notebook yourself, download the pre-built model files:
 
-| File | Description | Link |
-|------|-------------|------|
-| `movies.pkl` | Preprocessed movie titles + tags | [⬇️ Download](https://drive.google.com/file/d/1uhPwVT4n2hwzoViV33hFqC4awIsc3F7u/view?usp=sharing) |
+| File             | Description                        | Link                                                                                              |
+| ---------------- | ---------------------------------- | ------------------------------------------------------------------------------------------------- |
+| `movies.pkl`     | Preprocessed movie titles + tags   | [⬇️ Download](https://drive.google.com/file/d/1uhPwVT4n2hwzoViV33hFqC4awIsc3F7u/view?usp=sharing) |
 | `similarity.pkl` | 4806×4806 cosine similarity matrix | [⬇️ Download](https://drive.google.com/file/d/1Df7amtdQ_qeRe3cTc3yOuqYB7L3DP1uo/view?usp=sharing) |
 
 > Place all downloaded files in the project root folder alongside `app.py`.
@@ -91,7 +91,7 @@ API_KEY = "your_api_key_here"
 ```
 
 Get a free key at → [themoviedb.org](https://www.themoviedb.org/settings/api)
-*(Sign up → Settings → API → Create → Developer → Copy API Key v3)*
+_(Sign up → Settings → API → Create → Developer → Copy API Key v3)_
 
 ### Step 5 — Download the pkl files
 
@@ -118,14 +118,14 @@ The app will open at `http://localhost:8501` in your browser.
 
 ## 🛠️ Tech Stack
 
-| Tool | Purpose |
-|------|---------|
-| Python 3.10+ | Core language |
-| Pandas & NumPy | Data manipulation |
-| NLTK | Text stemming |
-| Scikit-learn | CountVectorizer + Cosine Similarity |
-| Streamlit | Web app framework |
-| TMDB API | Fetching movie posters |
+| Tool           | Purpose                             |
+| -------------- | ----------------------------------- |
+| Python 3.10+   | Core language                       |
+| Pandas & NumPy | Data manipulation                   |
+| NLTK           | Text stemming                       |
+| Scikit-learn   | CountVectorizer + Cosine Similarity |
+| Streamlit      | Web app framework                   |
+| TMDB API       | Fetching movie posters              |
 
 ---
 
@@ -141,10 +141,10 @@ requests
 ```
 
 Install with:
+
 ```bash
 pip install -r requirements.txt
 ```
-
 
 > **Note:** `similarity.pkl` is ~90MB. If GitHub rejects it, use [Git LFS](https://git-lfs.github.com/) or host it on Google Drive and load it in the app via `gdown`.
 
@@ -157,6 +157,7 @@ Your TMDB API key may not be activated yet. It can take up to 30 minutes after s
 
 **Q: `similarity.pkl` is too large to push to GitHub?**
 Use Git LFS:
+
 ```bash
 brew install git-lfs       # Mac
 git lfs install
@@ -174,6 +175,7 @@ Run all cells in `netflix_recommendation.py` in Jupyter Notebook. It will create
 ## 👩‍💻 Author
 
 **Gargi Joshi**
+
 - GitHub: [@gargijoshi9](https://github.com/gargijoshi9)
 - LinkedIn:[Gargi Joshi](https://www.linkedin.com/in/gargi-joshi-a9246b331/)
 
