@@ -17,7 +17,7 @@ import streamlit as st
 import pickle
 import requests
 import pandas as pd
-from concurrent.futures import ThreadPoolExecutor, as_completed
+import bz2 # NEW: Imported for compressed similarity matrix
 import time
 
 # ============================================================
@@ -228,19 +228,38 @@ div[role="alert"] { display: none !important; }
 @st.cache_resource
 def load_models():
     movies_data = pickle.load(open('movies.pkl', 'rb'))
-    sim_matrix  = pickle.load(open('similarity.pkl', 'rb'))
+    # UPDATED: Load the compressed file for deployment
+    data = bz2.BZ2File('similarity.pbz2', 'rb')
+    sim_matrix = pickle.load(data)
     return movies_data, sim_matrix
 
 movies, similarity = load_models()
 movie_list = movies['title'].values
 
+# ============================================================
+# Load genre mapping for evaluation
+# ============================================================
+@st.cache_data
+def load_genre_map():
+    import ast
+    try:
+        df = pd.read_csv('tmdb_5000_movies.csv')
+        def parse_genres(genre_str):
+            try:
+                return [i['name'] for i in ast.literal_eval(genre_str)]
+            except:
+                return []
+        df['genres_clean'] = df['genres'].apply(parse_genres)
+        return dict(zip(df['title'], df['genres_clean']))
+    except Exception:
+        return {}
+
+genre_map = load_genre_map()
+
 API_KEY = os.environ.get("TMDB_API_KEY")
 
 # ============================================================
 # Fetch a single poster — sequential with retries
-# NOTE: We use sequential fetching (not parallel) because
-# parallel threads sometimes cause Streamlit session issues.
-# Each request retries up to 3 times with increasing wait.
 # ============================================================
 def fetch_poster(movie_id):
     url = (
@@ -294,14 +313,20 @@ def recommend(movie):
 
     recommended_movies    = []
     recommended_posters   = []
+    recommended_scores    = [] # NEW: Added array for matching scores
 
     for i in movies_list:
         title    = movies.iloc[i[0]].title
         movie_id = movies.iloc[i[0]].movie_id
+        
         recommended_movies.append(title)
         recommended_posters.append(fetch_poster(movie_id))
+        
+        # NEW: Calculate cosine similarity score as a percentage
+        match_percentage = round(i[1] * 100, 1)
+        recommended_scores.append(match_percentage)
 
-    return recommended_movies, recommended_posters
+    return recommended_movies, recommended_posters, recommended_scores
 
 
 # ============================================================
@@ -334,7 +359,8 @@ with col_mid:
 # ============================================================
 if recommend_btn:
     with st.spinner("Fetching recommendations..."):
-        names, posters = recommend(selected_movie_name)
+        # UPDATED: Unpack the new 'scores' variable
+        names, posters, scores = recommend(selected_movie_name)
 
     st.markdown(f"""
     <p class="results-heading">Recommended for you</p>
@@ -349,12 +375,61 @@ if recommend_btn:
             # use_container_width replaces deprecated use_column_width
             st.image(posters[idx], use_container_width=True)
 
+            # UPDATED: Injected the new 'Match %' into the HTML card
             st.markdown(f"""
             <div class="movie-card-label">
                 <p class="movie-rank">{ranks[idx]}</p>
                 <p class="movie-name">{names[idx]}</p>
+                <p style="color: #46d369; font-size: 13px; font-weight: bold; margin-top: 5px;">{scores[idx]}% Match</p>
             </div>
             """, unsafe_allow_html=True)
+
+    # ============================================================
+    # Real-time Evaluation Dashboard
+    # ============================================================
+    query_genres = set(genre_map.get(selected_movie_name, []))
+    precisions = []
+    recalls = []
+
+    for name in names:
+        rec_genres = set(genre_map.get(name, []))
+        overlap = query_genres.intersection(rec_genres)
+        p = len(overlap) / len(rec_genres) if rec_genres else 0.0
+        r = len(overlap) / len(query_genres) if query_genres else 0.0
+        precisions.append(p)
+        recalls.append(r)
+
+    avg_precision = round((sum(precisions) / len(precisions)) * 100, 1) if precisions else 0.0
+    avg_recall = round((sum(recalls) / len(recalls)) * 100, 1) if recalls else 0.0
+    avg_sim = round(sum(scores) / len(scores), 1) if scores else 0.0
+
+    st.markdown(f"""
+    <div class="metrics-container" style="background: #111111; border: 1px solid #1e1a17; border-radius: 6px; padding: 1.5rem; margin-top: 2.5rem; text-align: left;">
+        <h3 style="font-family: 'Bebas Neue', sans-serif; font-size: 1.5rem; color: #f0ebe3; letter-spacing: 0.1em; margin-bottom: 1rem; border-bottom: 1px solid rgba(200,60,40,0.3); padding-bottom: 0.5rem;">📊 RECOMMENDATION SYSTEM EVALUATION METRICS</h3>
+        <div style="display: flex; justify-content: space-between; flex-wrap: wrap; gap: 1rem;">
+            <div style="flex: 1; min-width: 200px;">
+                <p style="font-family: 'DM Sans', sans-serif; font-size: 0.75rem; letter-spacing: 0.1em; color: #7a746c; text-transform: uppercase;">Average Cosine Similarity</p>
+                <p style="font-family: 'Bebas Neue', sans-serif; font-size: 2.2rem; color: #e8372a; margin-top: 0.2rem;">{avg_sim}% Match</p>
+                <p style="font-family: 'DM Sans', sans-serif; font-size: 0.8rem; color: #5a544c; font-style: italic; margin-top: 0.3rem;">Measures metadata similarity of keywords, cast, crew, and description.</p>
+            </div>
+            <div style="flex: 1; min-width: 200px;">
+                <p style="font-family: 'DM Sans', sans-serif; font-size: 0.75rem; letter-spacing: 0.1em; color: #7a746c; text-transform: uppercase;">Genre Precision@5</p>
+                <p style="font-family: 'Bebas Neue', sans-serif; font-size: 2.2rem; color: #46d369; margin-top: 0.2rem;">{avg_precision}%</p>
+                <p style="font-family: 'DM Sans', sans-serif; font-size: 0.8rem; color: #5a544c; font-style: italic; margin-top: 0.3rem;">Percentage of recommended movies' genres that match the query film's genres.</p>
+            </div>
+            <div style="flex: 1; min-width: 200px;">
+                <p style="font-family: 'DM Sans', sans-serif; font-size: 0.75rem; letter-spacing: 0.1em; color: #7a746c; text-transform: uppercase;">Genre Recall@5</p>
+                <p style="font-family: 'Bebas Neue', sans-serif; font-size: 2.2rem; color: #3498db; margin-top: 0.2rem;">{avg_recall}%</p>
+                <p style="font-family: 'DM Sans', sans-serif; font-size: 0.8rem; color: #5a544c; font-style: italic; margin-top: 0.3rem;">Percentage of the query film's genres captured in the recommendations.</p>
+            </div>
+        </div>
+        <div style="margin-top: 1rem; border-top: 1px solid rgba(42, 36, 32, 0.5); padding-top: 0.8rem;">
+            <p style="font-family: 'DM Sans', sans-serif; font-size: 0.85rem; color: #7a746c; line-height: 1.4;">
+                <strong>Evaluation Insight:</strong> In unsupervised recommendation systems, genre overlap (Precision and Recall) serves as an objective proxy for relevancy. Higher similarity ensures context matching, while balanced genre scores indicate consistent thematic overlap.
+            </p>
+        </div>
+    </div>
+    """, unsafe_allow_html=True)
 
 # ============================================================
 # UI — Footer
