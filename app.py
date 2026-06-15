@@ -17,7 +17,7 @@ import streamlit as st
 import pickle
 import requests
 import pandas as pd
-import bz2 # NEW: Imported for compressed similarity matrix
+import bz2
 import time
 
 # ============================================================
@@ -228,7 +228,6 @@ div[role="alert"] { display: none !important; }
 @st.cache_resource
 def load_models():
     movies_data = pickle.load(open('movies.pkl', 'rb'))
-    # UPDATED: Load the compressed file for deployment
     data = bz2.BZ2File('similarity.pbz2', 'rb')
     sim_matrix = pickle.load(data)
     return movies_data, sim_matrix
@@ -256,36 +255,32 @@ def load_genre_map():
 
 genre_map = load_genre_map()
 
-API_KEY = os.environ.get("TMDB_API_KEY")
-
+# UPDATED: Load the OMDb API Key instead of TMDB
+API_KEY = os.environ.get("OMDB_API_KEY")
+# HARDCODED FOR TESTING ONLY
+# API_KEY = "a4ffab94"
 # ============================================================
-# Fetch a single poster — sequential with retries
+# Fetch a single poster — sequential with retries using OMDB
 # ============================================================
-def fetch_poster(movie_id):
-    url = (
-        f"https://api.tmdb.org/3/movie/{movie_id}"
-        f"?api_key={API_KEY}&language=en-US"
-    )
-    headers = {
-        "accept": "application/json",
-        "User-Agent": "Mozilla/5.0"
-    }
+def fetch_poster(movie_title):
+    # UPDATED: OMDb uses the movie title and a different endpoint
+    url = f"http://www.omdbapi.com/?apikey={API_KEY}&t={movie_title}"
 
     for attempt in range(3):
         try:
-            response = requests.get(url, headers=headers, timeout=10)
+            response = requests.get(url, timeout=10)
 
             if response.status_code == 429:        # rate limited
-                time.sleep(2 * (attempt + 1))      # wait 2s, 4s, 6s
+                time.sleep(2 * (attempt + 1))
                 continue
 
             if response.status_code == 200:
                 data = response.json()
-                path = data.get('poster_path')
-                if path:
-                    return "https://image.tmdb.org/t/p/w500" + path
+                # OMDb returns 'Response': 'True' if found, and a 'Poster' link
+                if data.get('Response') == 'True' and data.get('Poster') and data.get('Poster') != 'N/A':
+                    return data['Poster']
 
-            # Got a response but no poster_path → stop retrying
+            # Got a response but no poster → stop retrying
             break
 
         except requests.exceptions.Timeout:
@@ -313,16 +308,16 @@ def recommend(movie):
 
     recommended_movies    = []
     recommended_posters   = []
-    recommended_scores    = [] # NEW: Added array for matching scores
+    recommended_scores    = []
 
     for i in movies_list:
-        title    = movies.iloc[i[0]].title
-        movie_id = movies.iloc[i[0]].movie_id
+        title = movies.iloc[i[0]].title
         
         recommended_movies.append(title)
-        recommended_posters.append(fetch_poster(movie_id))
         
-        # NEW: Calculate cosine similarity score as a percentage
+        # UPDATED: Pass the 'title' to fetch_poster instead of 'movie_id'
+        recommended_posters.append(fetch_poster(title))
+        
         match_percentage = round(i[1] * 100, 1)
         recommended_scores.append(match_percentage)
 
@@ -359,7 +354,6 @@ with col_mid:
 # ============================================================
 if recommend_btn:
     with st.spinner("Fetching recommendations..."):
-        # UPDATED: Unpack the new 'scores' variable
         names, posters, scores = recommend(selected_movie_name)
 
     st.markdown(f"""
@@ -372,10 +366,8 @@ if recommend_btn:
 
     for idx, col in enumerate(cols):
         with col:
-            # use_container_width replaces deprecated use_column_width
             st.image(posters[idx], use_container_width=True)
 
-            # UPDATED: Injected the new 'Match %' into the HTML card
             st.markdown(f"""
             <div class="movie-card-label">
                 <p class="movie-rank">{ranks[idx]}</p>
@@ -438,6 +430,6 @@ st.markdown("""
 <div class="site-footer">
     Built with <span>♥</span> 
             &nbsp;·&nbsp; Python &nbsp;·&nbsp; Scikit-learn
-    &nbsp;·&nbsp; NLTK &nbsp;·&nbsp; Streamlit &nbsp;·&nbsp; TMDB API
+    &nbsp;·&nbsp; NLTK &nbsp;·&nbsp; Streamlit &nbsp;·&nbsp; OMDb API
 </div>
 """, unsafe_allow_html=True)
